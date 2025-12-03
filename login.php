@@ -4,7 +4,6 @@ include "db.php";
 
 $error = "";
 
-// Jika sudah login, langsung lempar ke index
 if (isset($_SESSION["username"])) {
     header("Location: index.php");
     exit;
