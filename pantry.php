@@ -44,7 +44,7 @@ function generateExpiryNotifications($conn) {
 // Ambil data pantry
 $items = mysqli_query($conn, "SELECT * FROM items ORDER BY expiry_date ASC");
 
-// Gunakan fungsi untuk notifikasi
+// fungsi notifikasi yg akan ditampilkan di atas tabel
 $notif = generateExpiryNotifications($conn);
 
 ?>
