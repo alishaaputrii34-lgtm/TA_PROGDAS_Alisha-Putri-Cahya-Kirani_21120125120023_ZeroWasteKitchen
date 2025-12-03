@@ -1,39 +1,49 @@
 <?php
 session_start();
-include 'config.php';
+include 'db.php';
 
-// cek login
+// CEK LOGIN
+
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit;
 }
 
-// cek stack
-if (!isset($_SESSION['hapus_stack']) || empty($_SESSION['hapus_stack'])) {
-    echo "<script>alert('Tidak ada aksi yang dapat di-undo.'); window.location='pantry.php';</script>";
+// CEK APAKAH STACK PENGHAPUSAN ADA
+if (empty($_SESSION['hapus_stack'])) {
+    echo "<script>
+            alert('Tidak ada aksi yang dapat di-undo.');
+            window.location='pantry.php';
+          </script>";
     exit;
 }
+ // POP DATA TERAKHIR DARI STACK (LIFO)
+$lastItem = array_pop($_SESSION['hapus_stack']);
 
-// ambil aksi terakhir (pop)
-$last = array_pop($_SESSION['hapus_stack']);
+$name = mysqli_real_escape_string($conn, $lastItem['name']);
+$quantity = intval($lastItem['quantity']);
+$unit = mysqli_real_escape_string($conn, $lastItem['unit']);
+$category = mysqli_real_escape_string($conn, $lastItem['category']);
 
-// sanitasi
-$name = mysqli_real_escape_string($conn, $last['name']);
-$qty  = intval($last['quantity']);
-$exp  = ($last['expiry_date'] === null || $last['expiry_date'] === '') ? "NULL" : "'" . mysqli_real_escape_string($conn, $last['expiry_date']) . "'";
-$unit = mysqli_real_escape_string($conn, $last['unit']);
-$cat  = mysqli_real_escape_string($conn, $last['category']);
-$photo = mysqli_real_escape_string($conn, $last['photo']);
+// expiry bisa kosong → NULL
+if (empty($lastItem['expiry_date'])) {
+    $expiry = "NULL";
+} else {
+    $expiry = "'" . mysqli_real_escape_string($conn, $lastItem['expiry_date']) . "'";
+}
 
-// masukkan kembali ke DB (tanpa id agar auto_increment bekerja)
-$sql = "INSERT INTO items (name, quantity, expiry_date, unit, category, photo)
-        VALUES ('$name', $qty, $exp, '$unit', '$cat', '$photo')";
-mysqli_query($conn, $sql);
+// INSERT KEMBALI KE DATABASE
 
-// update session stack sudah dilakukan oleh array_pop (pop terjadi di memory)
-// simpan lagi session (untuk keamanan)
-$_SESSION['hapus_stack'] = isset($_SESSION['hapus_stack']) ? $_SESSION['hapus_stack'] : [];
+$insert = "
+    INSERT INTO items (name, quantity, expiry_date, unit, category)
+    VALUES ('$name', $quantity, $expiry, '$unit', '$category')
+";
 
-echo "<script>alert('Undo berhasil! Item dikembalikan.'); window.location='pantry.php';</script>";
+mysqli_query($conn, $insert);
+
+echo "<script>
+        alert('Undo berhasil! Item berhasil dikembalikan.');
+        window.location='pantry.php';
+      </script>";
 exit;
 ?>

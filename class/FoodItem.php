@@ -1,5 +1,5 @@
-    <?php
-require_once "Item.php";
+<?php
+require_once __DIR__ . "/Item.php";
 
 class FoodItem extends Item {
     public $category;

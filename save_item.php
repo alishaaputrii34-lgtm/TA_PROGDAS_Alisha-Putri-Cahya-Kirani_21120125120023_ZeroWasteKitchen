@@ -1,56 +1,83 @@
 <?php
 session_start();
-include 'config.php';
-require_once "class/FoodItem.php";   // ← Tambah OOP
+require_once 'db.php';
+require_once 'class/FoodItem.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header("Location: index.php");
+// CEK LOGIN YANG BENAR
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
     exit;
 }
 
-// Ambil dan sanitasi input
-$item = trim($_POST['item'] ?? '');
-$qty  = intval($_POST['qty'] ?? 0);
-$exp  = $_POST['exp'] ?? null;
-$unit = $_POST['unit'] ?? '';
-$category = $_POST['category'] ?? '';
-$photoName = '';
 
-// === IMPLEMENTASI OOP ===
-$foodObj = new FoodItem($item, $qty, $exp, $category, $unit);
-// Bisa digunakan misalnya: $foodObj->isExpired();
-
-// Upload foto
-if (!empty($_FILES['photo']['name'])) {
-    if (!is_dir('uploads')) mkdir('uploads', 0777, true);
-
-    $tmp = $_FILES['photo']['tmp_name'];
-    $fname = time() . '_' . basename($_FILES['photo']['name']);
-    $path = 'uploads/' . $fname;
-
-    if (move_uploaded_file($tmp, $path)) {
-        $photoName = mysqli_real_escape_string($conn, $fname);
-    }
+// ==========================
+// CEK METODE HARUS POST
+// ==========================
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    header("Location: pantry.php");
+    exit;
 }
 
-// Query simpan data
-$expValue = (empty($exp)) ? "NULL" : "'" . mysqli_real_escape_string($conn, $exp) . "'";
+// ==========================
+// AMBIL DATA FORM
+// ==========================
+$item     = trim($_POST['item'] ?? '');
+$qty      = intval($_POST['qty'] ?? 0);
+$exp      = $_POST['exp'] ?? null;
+$unit     = trim($_POST['unit'] ?? '');
+$category = trim($_POST['category'] ?? '');
 
-$sql = "INSERT INTO items (name, quantity, expiry_date, unit, category, photo)
-        VALUES (
-            '" . mysqli_real_escape_string($conn, $foodObj->name) . "', 
-            {$foodObj->qty}, 
-            $expValue,
-            '" . mysqli_real_escape_string($conn, $foodObj->unit) . "',
-            '" . mysqli_real_escape_string($conn, $foodObj->category) . "',
-            '$photoName'
-        )";
-
-if (mysqli_query($conn, $sql)) {
-    echo "<script>alert('Item berhasil disimpan!'); window.location='pantry.php';</script>";
+// ==========================
+// VALIDASI DASAR
+// ==========================
+if ($item === '' || $qty <= 0) {
+    echo "<script>
+            alert('Nama item wajib diisi dan quantity harus lebih dari 0.');
+            window.location='pantry.php';
+          </script>";
     exit;
+}
+
+// Buat objek OOP
+$food = new FoodItem($item, $qty, $exp, $category, $unit);
+
+// ==========================
+// PREPARED STATEMENT
+// ==========================
+$stmt = $conn->prepare("
+    INSERT INTO items (name, quantity, expiry_date, unit, category)
+    VALUES (?, ?, ?, ?, ?)
+");
+
+// Jika tanggal kosong → set null
+$expValue = empty($food->exp) ? null : $food->exp;
+
+$stmt->bind_param(
+    "sisss",
+    $food->name,
+    $food->qty,
+    $expValue,
+    $food->unit,
+    $food->category
+);
+
+// ==========================
+// EKSEKUSI QUERY
+// ==========================
+if ($stmt->execute()) {
+    echo "<script>
+            alert('Item berhasil disimpan!');
+            window.location='pantry.php';
+          </script>";
 } else {
-    echo "Error: " . mysqli_error($conn);
-    exit;
+    // Jangan tampilkan detail error ke user
+    error_log('DB Error: ' . $stmt->error);
+    echo "<script>
+            alert('Terjadi kesalahan saat menyimpan data.');
+            window.location='pantry.php';
+          </script>";
 }
+
+$stmt->close();
+$conn->close();
 ?>

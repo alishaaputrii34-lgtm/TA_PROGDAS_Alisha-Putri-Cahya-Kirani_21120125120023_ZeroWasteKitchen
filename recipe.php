@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'config.php';
+include 'db.php';
 
 // Cek login
 if (!isset($_SESSION['username'])) {
@@ -8,7 +8,7 @@ if (!isset($_SESSION['username'])) {
     exit;
 }
 
-// Ambil daftar item pantry (nama dikonversi ke lowercase)
+// Ambil daftar item pantry (lowercase)
 $pantry = [];
 $getPantry = mysqli_query($conn, "SELECT name FROM items");
 
@@ -72,8 +72,6 @@ $recipes = mysqli_query($conn, "SELECT * FROM recipes");
         margin-bottom: 20px;
     }
 
-    .btn-back:hover { background: #567d5b; }
-
     .recipe-card {
         background: white;
         border-radius: 15px;
@@ -118,8 +116,6 @@ $recipes = mysqli_query($conn, "SELECT * FROM recipes");
         font-weight: 600;
         margin-left: 8px;
     }
-
-    ul { margin-top: 8px; }
 </style>
 </head>
 
@@ -132,13 +128,18 @@ $recipes = mysqli_query($conn, "SELECT * FROM recipes");
 
     <a href="pantry.php" class="btn-back">⬅ Kembali</a>
 
+    <?php if (mysqli_num_rows($recipes) == 0): ?>
+        <p><i>Tidak ada resep tersedia.</i></p>
+    <?php endif; ?>
+
     <?php while ($r = mysqli_fetch_assoc($recipes)): ?>
 
         <?php
-            $recipe_id = $r['id'];
+            $recipe_id = (int)$r['id'];
 
-            // Ambil bahan dari recipe_ingredients
-            $ingredientsQuery = mysqli_query($conn,
+            // Ambil bahan resep
+            $ingredientsQuery = mysqli_query(
+                $conn,
                 "SELECT ingredient FROM recipe_ingredients WHERE recipe_id = $recipe_id"
             );
 
@@ -147,40 +148,40 @@ $recipes = mysqli_query($conn, "SELECT * FROM recipes");
                 $ingredients[] = strtolower($i['ingredient']);
             }
 
-            // Cek kecocokan
+            // Hitung bahan cocok & hilang
             $available = array_intersect($ingredients, $pantry);
             $missing   = array_diff($ingredients, $pantry);
 
-            // Tentukan status
+            // Tentukan badge status
             if (count($missing) == 0) {
-                $status = "<span class='badge-ready'>Bisa dimasak! ✔</span>";
+                $status = "<span class='badge-ready'>Bisa dimasak!</span>";
             } elseif (count($available) >= count($ingredients) / 2) {
-                $status = "<span class='badge-partial'>Bahan hampir lengkap △</span>";
+                $status = "<span class='badge-partial'>Bahan hampir lengkap</span>";
             } else {
-                $status = "<span class='badge-missing'>Bahan tidak cukup ✘</span>";
+                $status = "<span class='badge-missing'>Bahan tidak cukup</span>";
             }
         ?>
 
         <div class="recipe-card">
 
             <div class="recipe-title">
-                <?= $r['name']; ?> <?= $status ?>
+                <?= htmlspecialchars($r['name']); ?> <?= $status ?>
             </div>
 
             <h4>Bahan:</h4>
             <ul>
                 <?php foreach ($ingredients as $ing): ?>
                     <?php if (in_array($ing, $pantry)): ?>
-                        <li>✔ <?= $ing ?></li>
+                        <li>✔ <?= htmlspecialchars($ing) ?></li>
                     <?php else: ?>
-                        <li>✘ <?= $ing ?></li>
+                        <li>✘ <?= htmlspecialchars($ing) ?></li>
                     <?php endif; ?>
                 <?php endforeach; ?>
             </ul>
 
             <h4>Cara Memasak:</h4>
             <pre style="white-space: pre-wrap; font-family: Poppins;">
-<?= $r['steps']; ?>
+<?= htmlspecialchars($r['steps']); ?>
             </pre>
 
         </div>
