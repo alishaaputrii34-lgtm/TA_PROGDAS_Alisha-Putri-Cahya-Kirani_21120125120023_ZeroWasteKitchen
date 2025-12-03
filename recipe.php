@@ -8,7 +8,7 @@ if (!isset($_SESSION['username'])) {
     exit;
 }
 
-// Ambil daftar item pantry (lowercase)
+// Ambil daftar item pantry
 $pantry = [];
 $getPantry = mysqli_query($conn, "SELECT name FROM items");
 
@@ -148,11 +148,11 @@ $recipes = mysqli_query($conn, "SELECT * FROM recipes");
                 $ingredients[] = strtolower($i['ingredient']);
             }
 
-            // Hitung bahan cocok & hilang
+            // Hitung bahan yang cocok & hilang
             $available = array_intersect($ingredients, $pantry);
             $missing   = array_diff($ingredients, $pantry);
 
-            // Tentukan badge status
+            // Menentukan badge status ketersediaan ingridients
             if (count($missing) == 0) {
                 $status = "<span class='badge-ready'>Bisa dimasak!</span>";
             } elseif (count($available) >= count($ingredients) / 2) {
