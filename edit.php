@@ -1,7 +1,7 @@
 <?php
 require_once 'db.php';
 
-// Ambil ID dari URL (aman)
+// Ambil ID dari URL
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 // Jika ID tidak valid
@@ -9,10 +9,6 @@ if ($id <= 0) {
     header("Location: pantry.php");
     exit;
 }
-
-// ============================
-//  PREPARED STATEMENT
-// ============================
 $stmt = mysqli_prepare($conn, 
 "SELECT id, name, quantity, expiry_date FROM items WHERE id = ?");
 mysqli_stmt_bind_param($stmt, "i", $id);
